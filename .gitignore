@@ -1,0 +1,68 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.egg-info/
+dist/
+build/
+*.egg
+.eggs/
+
+# Virtual environments
+venv/
+.venv/
+env/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# Jupyter
+.ipynb_checkpoints/
+
+# Dataset (large files - don't commit)
+dataset/wavs/
+data/raw/
+data/texts/
+*.wav
+*.mp3
+*.flac
+
+# Model checkpoints (large files)
+checkpoints/
+model/
+*.pth
+*.pt
+*.ckpt
+*.onnx
+
+# Training logs
+logs/
+runs/
+wandb/
+
+# Temp
+*.tmp
+*.bak
+scratch/
+
+# Docs
+docs/
+
+#optional
+experiments/
+tests/
+!tests/
+tests/*
+!tests/test_speaker_surgery.py
+!tests/test_speaker_embedding_finetune.py
+!tests/test_finetune_config.py
+!tests/test_finetune_runner.py
+finetune_output/

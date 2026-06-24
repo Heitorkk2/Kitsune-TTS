@@ -1,0 +1,35 @@
+{
+  "name": "@kitsune-tts/core",
+  "version": "0.1.0",
+  "description": "Kitsune-TTS",
+  "main": "kitsune-tts.js",
+  "files": [
+    "kitsune-tts.js",
+    "phonemizer.js",
+    "README.md"
+  ],
+  "keywords": [
+    "tts",
+    "text-to-speech",
+    "vits",
+    "onnx",
+    "wasm",
+    "browser",
+    "portuguese",
+    "pt-br"
+  ],
+  "license": "GPL-3.0-only",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/Heitorkk2/Kitsune-TTS"
+  },
+  "peerDependencies": {
+    "onnxruntime-web": ">=1.19.0"
+  },
+  "scripts": {
+    "test": "node test-phonemizer.js"
+  },
+  "engines": {
+    "node": ">=18"
+  }
+}

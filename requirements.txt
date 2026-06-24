@@ -1,0 +1,14 @@
+torch
+torchaudio
+numpy
+scipy
+librosa
+tensorboard
+phonemizer
+tqdm
+wandb
+num2words
+onnx
+onnxruntime
+numba
+huggingface_hub

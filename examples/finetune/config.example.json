@@ -1,0 +1,21 @@
+{
+  "run_name": "my_voice_run",
+  "output_root": "../../finetune_output",
+  "model": {
+    "repo_id": "Heitorkk2/Kitsune-TTS-V1",
+    "revision": "main",
+    "local_dir": null
+  },
+  "speakers": [
+    {
+      "name": "my_speaker",
+      "wav_dir": "../../dataset/my_speaker/wavs",
+      "transcript": "../../dataset/my_speaker/train.txt"
+    }
+  ],
+  "training": {
+    "max_steps": 2400,
+    "batch_size": 16,
+    "precision": "fp16"
+  }
+}

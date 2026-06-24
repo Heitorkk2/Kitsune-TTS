@@ -1,0 +1,48 @@
+[build-system]
+requires = ["setuptools>=68.0", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "kitsune-tts"
+version = "0.1.0"
+description = "Kitsune-TTS: A hyper-lightweight, pure PyTorch text-to-speech engine optimized for edge devices, low-latency inference, and zero-headache training."
+readme = "README.md"
+license = {text = "GPL-3.0-only"}
+requires-python = ">=3.9"
+keywords = ["text-to-speech", "vits2", "anime", "tts", "pytorch"]
+
+dependencies = [
+    "numpy",
+    "phonemizer",
+    "num2words"
+]
+
+[project.optional-dependencies]
+torch = ["torch>=2.1.0", "torchaudio>=2.1.0"]
+onnx = ["onnxruntime>=1.19.0"]
+train = [
+    "torch>=2.1.0",
+    "torchaudio>=2.1.0",
+    "scipy",
+    "librosa",
+    "tensorboard",
+    "tqdm",
+    "numba",
+    "huggingface_hub",
+]
+logging = ["wandb>=0.15.0"]
+dev = ["pytest>=7.0", "wandb>=0.15.0", "onnx>=1.15.0"]
+
+[project.scripts]
+kitsune-train = "train:main"
+kitsune-infer = "infer:main"
+kitsune-finetune = "finetune:main"
+
+[tool.setuptools.packages.find]
+include = ["kitsune*"]
+
+[tool.setuptools]
+py-modules = ["train", "infer", "finetune"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
