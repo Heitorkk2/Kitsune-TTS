@@ -233,9 +233,29 @@ class KitsuneTTS {
             noise_scale: noiseScaleT, length_scale: lengthScaleT,
         };
 
-        const results = await this.session.run(feeds);
-        // Clone the array to release the WASM memory reference and prevent leaks
-        return new Float32Array(results.audio.data);
+        let results;
+        try {
+            results = await this.session.run(feeds);
+            // The caller owns the PCM copy, independently of runtime tensor lifetime.
+            return new Float32Array(results.audio.data);
+        } finally {
+            for (const tensor of new Set([
+                ...Object.values(feeds), ...Object.values(results || {}),
+            ])) tensor.dispose?.();
+        }
+    }
+
+    /**
+     * Yield PCM chunks as each segment completes, including configured silence.
+     * Does not retain previous chunks or concatenate the whole utterance.
+     * Consumers schedule playback; breaking the loop prevents further synthesis.
+     */
+    async *streamFromSegments(segments, speakerId = 0, opts = {}) {
+        for (const seg of segments) {
+            const audio = await this.synthesizeFromIds(seg.ids, speakerId, opts);
+            if (audio.length > 0) yield audio;
+            if (seg.silenceSamples > 0) yield new Float32Array(seg.silenceSamples);
+        }
     }
 
     /**
@@ -251,10 +271,8 @@ class KitsuneTTS {
         const t0 = performance.now();
         const audioChunks = [];
 
-        for (const seg of segments) {
-            const segAudio = await this.synthesizeFromIds(seg.ids, speakerId, { noiseScale, lengthScale });
-            if (segAudio.length > 0) audioChunks.push(segAudio);
-            if (seg.silenceSamples > 0) audioChunks.push(new Float32Array(seg.silenceSamples));
+        for await (const chunk of this.streamFromSegments(segments, speakerId, { noiseScale, lengthScale })) {
+            audioChunks.push(chunk);
         }
 
         const totalLength = audioChunks.reduce((acc, c) => acc + c.length, 0);

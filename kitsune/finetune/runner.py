@@ -46,6 +46,12 @@ def load_resume_state(path):
         return torch.load(path, map_location="cpu", weights_only=True)
 
 
+def gradients_are_finite(parameters):
+    """Reduce on-device, then synchronize once rather than once per parameter."""
+    checks = [torch.isfinite(p.grad).all() for p in parameters if p.grad is not None]
+    return not checks or bool(torch.stack(checks).all().item())
+
+
 def write_wav(path, audio, sample_rate):
     pcm = (np.clip(audio, -1.0, 1.0) * 32767).astype("<i2")
     with wave.open(str(path), "wb") as handle:
@@ -427,12 +433,12 @@ class SpeakerFineTuner:
                 microbatches_accumulated += 1
 
                 current_metrics = {
-                    "total": float(loss.detach().item()),
-                    "mel": float(loss_mel.detach().item()),
-                    "kl": float(loss_kl.detach().item()),
-                    "duration": float(loss_duration.detach().item()),
-                    "embedding_norm": float(loss_embedding_norm.detach().item()),
-                    "diversity": float(loss_diversity.detach().item()),
+                    "total": loss.detach().float(),
+                    "mel": loss_mel.detach().float(),
+                    "kl": loss_kl.detach().float(),
+                    "duration": loss_duration.detach().float(),
+                    "embedding_norm": loss_embedding_norm.detach().float(),
+                    "diversity": loss_diversity.detach().float(),
                 }
                 for name, value in current_metrics.items():
                     metric_sums[name] = metric_sums.get(name, 0.0) + value
@@ -447,11 +453,7 @@ class SpeakerFineTuner:
                     for parameter in model.parameters()
                     if parameter.requires_grad
                 ]
-                gradients_finite = all(
-                    parameter.grad is None
-                    or torch.isfinite(parameter.grad).all().item()
-                    for parameter in active_parameters
-                )
+                gradients_finite = gradients_are_finite(active_parameters)
                 if not gradients_finite:
                     optimizer.zero_grad(set_to_none=True)
                     scaler.update()
@@ -480,10 +482,11 @@ class SpeakerFineTuner:
                 optimizer.zero_grad(set_to_none=True)
 
                 step += 1
-                latest_losses = {
-                    name: value / t.grad_accum_steps
-                    for name, value in metric_sums.items()
-                }
+                # Transfer all accumulated metrics together, only at update boundaries.
+                metric_values = torch.stack(list(metric_sums.values()))
+                latest_losses = dict(zip(
+                    metric_sums, (metric_values / t.grad_accum_steps).cpu().tolist()
+                ))
                 latest_losses.update(
                     {
                         "grad_norm": float(grad_norm.detach().item()),

@@ -18,12 +18,20 @@ class KitsuneSynthesizer:
         ort_threads: int = 0,
         providers: Optional[Sequence[str]] = None,
         remove_weight_norm: bool = True,
+        compact: bool = True,
+        fast_cpu: bool = False,
     ):
         """Initialize a PyTorch or ONNX Kitsune-TTS synthesizer.
 
         ``ort_threads=0`` lets ONNX Runtime select the native CPU thread count.
         PyTorch is imported only when ``checkpoint`` is used, so ONNX-only
         installations do not need the much larger Torch dependency.
+        ``compact=True`` drops training-only modules after strict checkpoint
+        loading. Set it to False if you need the complete model state_dict.
+        Checkpoint storage precision does not change FP32 inference precision.
+        ``fast_cpu=True`` opts into a channels-last PyTorch CPU vocoder. It
+        selects CPU when device is omitted; CUDA and ONNX are not supported.
+        Its converted state_dict is not a training/export checkpoint.
         """
         if checkpoint is None and onnx_path is None:
             raise ValueError("Must provide either checkpoint (PyTorch) or onnx_path (ONNX).")
@@ -31,6 +39,11 @@ class KitsuneSynthesizer:
             raise ValueError("Provide checkpoint or onnx_path, not both.")
 
         self.backend = "onnx" if onnx_path is not None else "torch"
+        if fast_cpu and self.backend == "onnx":
+            raise ValueError("fast_cpu is only available for PyTorch checkpoints, not ONNX.")
+        if fast_cpu and not remove_weight_norm:
+            raise ValueError("fast_cpu requires remove_weight_norm=True.")
+        self.fast_cpu = bool(fast_cpu)
 
         if config is None:
             model_path = onnx_path if onnx_path is not None else checkpoint
@@ -86,8 +99,10 @@ class KitsuneSynthesizer:
 
         self._torch = torch
         self.device = torch.device(
-            device if device is not None else ("cuda" if torch.cuda.is_available() else "cpu")
+            device if device is not None else ("cpu" if fast_cpu else ("cuda" if torch.cuda.is_available() else "cpu"))
         )
+        if fast_cpu and self.device.type != "cpu":
+            raise ValueError("fast_cpu requires device='cpu'.")
 
         n_speakers = (
             len(self.speaker_map)
@@ -103,11 +118,14 @@ class KitsuneSynthesizer:
             self.hparams.get("train", {}).get("segment_size", 8192)
             // self.hparams["data"]["hop_length"],
             **model_params,
-        ).to(self.device)
+        )
 
-        checkpoint_dict = torch.load(checkpoint, map_location=self.device, weights_only=True)
+        # Load and compact on CPU before transferring to avoid duplicate GPU weights.
+        checkpoint_dict = torch.load(checkpoint, map_location="cpu", weights_only=True)
         if "generator" in checkpoint_dict:
             state_dict = checkpoint_dict["generator"]
+        elif "model" in checkpoint_dict:
+            state_dict = checkpoint_dict["model"]
         elif "model_state_dict" in checkpoint_dict:
             state_dict = checkpoint_dict["model_state_dict"]
         else:
@@ -118,9 +136,19 @@ class KitsuneSynthesizer:
             for key, value in state_dict.items()
         }
         self.model.load_state_dict(clean_state_dict)
+        del clean_state_dict, state_dict, checkpoint_dict
+        if compact:
+            del self.model.enc_q
+            if self.model.use_sdp:
+                for name in ("post_pre", "post_proj", "post_convs", "post_flows"):
+                    delattr(self.model.dp, name)
         self.model.eval()
         if remove_weight_norm:
             self.model.remove_weight_norm()
+        if fast_cpu:
+            from kitsune.fast_cpu import ChannelsLastVocoder
+            self.model.dec = ChannelsLastVocoder(self.model.dec)
+        self.model.to(self.device)
 
     def list_speakers(self) -> list:
         """Return the available speaker names."""

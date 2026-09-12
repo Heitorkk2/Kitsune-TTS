@@ -26,6 +26,8 @@ def main():
     parser.add_argument('-s', '--speaker', type=str, default='frieren', help='Speaker persona name')
     parser.add_argument('-l', '--lang', type=str, default='pt-br', help='Language code')
     parser.add_argument('-o', '--output', type=str, default='output.wav', help='Output wav path')
+    parser.add_argument('--device', default=None, help='PyTorch device (cpu, cuda, etc.)')
+    parser.add_argument('--fast-cpu', action='store_true', help='Use the optional PyTorch channels-last CPU vocoder')
     args = parser.parse_args()
 
     print("Loading Kitsune-TTS VITS2-Slim...")
@@ -35,6 +37,8 @@ def main():
             checkpoint=args.model,
             onnx_path=args.onnx,
             config=args.config,
+            device=args.device,
+            fast_cpu=args.fast_cpu,
         )
         
         print(f"Synthesizing text: {args.text}")

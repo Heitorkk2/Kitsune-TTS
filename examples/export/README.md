@@ -1,5 +1,10 @@
 # ONNX exports
 
+The PyTorch API's optional `fast_cpu=True` layout is for CPU inference only.
+Export the original checkpoints with the scripts below, not a converted runtime
+`state_dict`. The fast CPU option does not apply to ONNX or JavaScript; the 2D
+vocoder conversion was slower in local ONNX tests.
+
 Run these commands from the project root. The local weights directory is
 `model/` (singular). Use weights and configuration from the same release of
 [Heitorkk2/Kitsune-TTS-V1](https://huggingface.co/Heitorkk2/Kitsune-TTS-V1).
@@ -50,6 +55,34 @@ repository alongside the matching `model_config.json`, `latest_model_fp16.pth`
 and `latest_model_fp32.pth`. Keep the configuration beside the ONNX file when
 using the Python client. The exporter only creates local files; it does not
 upload anything. Model artifacts in `model/` are ignored by Git.
+
+## CPU profiling without changing the model
+
+```bash
+python examples/export/profile_onnx_cpu.py model/kitsune39M.onnx --iterations 5
+```
+
+This uses real PT-BR text (requires the Python phonemizer and eSpeak), fixed
+speaker ID 1 and `noise_scale=0`. It compares automatic/4/8 threads, graph
+optimization levels, worker spinning and parallel execution. Repeat `--text`
+to supply your own phrases, or use `--speaker-id` to select another voice.
+For a narrower repeat, use `--variant threads8 --variant no_spin8`; the
+automatic baseline is still measured before and after the selected variants.
+
+JSON lines report warmed-up inference times, RTF, exact equality and maximum
+absolute waveform error against the initial default session. Phonemization and
+session initialization are excluded. A final baseline repeat helps reveal
+thermal/background-load drift. Compare several runs on an otherwise idle
+machine; small differences are not evidence of a reliable speedup. Numerical
+closeness alone is not a perceptual quality guarantee.
+
+A separate instrumented run reports time by model component and the slowest
+operators/nodes. Its timings include profiling overhead and are not latency
+benchmarks. Raw traces use a temporary directory and are removed automatically;
+the script does not modify the model or change application defaults.
+
+See [ONNX Runtime thread management](https://onnxruntime.ai/docs/performance/tune-performance/threading.html)
+for the tested runtime settings.
 
 ## Split acoustic model and vocoder
 

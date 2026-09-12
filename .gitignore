@@ -65,4 +65,5 @@ tests/*
 !tests/test_speaker_embedding_finetune.py
 !tests/test_finetune_config.py
 !tests/test_finetune_runner.py
+!tests/test_inference_optimizations.py
 finetune_output/

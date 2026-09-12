@@ -1,5 +1,5 @@
 <p align="center">
-  <img src="assets/logo.png" alt="Kitsune-TTS Logo" width="600"/>
+  <img src="assets/logo.png" alt="Kitsune-TTS Logo" width="480"/>
 </p>
 <p align="center"><em>Ultra-lightweight Text-to-Speech for anime personas and virtual assistants.</em></p>
 <p align="center">
@@ -20,86 +20,90 @@
 
 Kitsune-TTS is an **ultra-lightweight, non-autoregressive TTS engine** designed from scratch for:
 
-- 🎀 **Anime / VTuber / Kawaii personas**: character voices that sound alive
-- ⚡ **CPU-first inference**: real-time synthesis on local hardware
-- 🇧🇷 **Portuguese-first**: natively trained on PT-BR
-- 🪶 **Under 40M parameters**: highly efficient, fast, and lightweight architecture
+- 🎀 **Anime / VTuber / Kawaii personas**: character voices that sound expressive and alive.
+- ⚡ **CPU-first inference**: real-time synthesis on everyday consumer hardware.
+- 🇧🇷 **Portuguese-first**: natively trained on PT-BR phonetic nuances.
+- 🪶 **Under 40M parameters**: highly efficient, fast, and compact architecture.
 
-## 🎯 Key Features & Performance
+---
+
+## 🎯 Key Features
 
 | Feature | Description |
-|:--------|:------------|
-| **Tiny & Fast** | V1 checkpoint is ~159 MB (FP32) / ~80 MB (FP16) / ONNX export is ~121 MB. On a standard consumer CPU (e.g., Ryzen 5), pure Python inference hits a blazing **RTF of ~0.3** (generating 10 seconds of audio takes less than 3 seconds). |
-| **Multi-Speaker** | 5 anchor anime voices with classic speaker embeddings. |
-| **Stable Training** | Stabilized for `bfloat16` precision (log-variance clamping, Spectral Norm disengaged). |
-| **Voice Walk** | Interpolate between speakers to generate new voice variations. |
+|:---|:---|
+| 🪶 **Ultra-Lightweight** | Under **40M parameters** (~76 MB in FP16 / ~115 MB in ONNX). Fits easily on edge devices. |
+| ⚡ **Blazing Fast** | **RTF 0.22** on consumer CPU (4.46× real-time) and **RTF 0.02** on GPU (46× real-time). |
+| 🇧🇷 **Portuguese-First** | Natively trained from scratch on Brazilian Portuguese (PT-BR) via `espeak-ng`. |
+| 🎭 **Multi-Speaker** | 5 anchor anime personas with smooth voice interpolation (*Voice Walk*). |
+| 🛠️ **Zero Quantization** | Pure FP32 precision execution without quality or audio fidelity loss. |
+| 🌐 **Multi-Platform** | Native runtimes for **PyTorch**, **ONNX Runtime (CPU/GPU)**, and **JavaScript (Browser/Node)**. |
+
+---
+
+## 📊 Benchmarks & Performance
+
+Measured synthesizing **9.21 seconds of audio** (`noise_scale=0`, speaker *Frieren*, FP32 computation, zero quantization, identical weights):
+
+| Device / Hardware | Backend / Runtime | Checkpoint | Latency | RTF | Real-time Factor |
+|:---|:---|:---|:---:|:---:|:---:|
+| **Local CPU** <br><sub>AMD Ryzen 7 5700U (8 threads)</sub> | **PyTorch (`fast_cpu`)** ⚡ | FP16 file (~76 MB) | **2.06 s** | **0.224** | **4.46×** |
+| **Local CPU** <br><sub>AMD Ryzen 7 5700U (8 threads)</sub> | **PyTorch (`fast_cpu`)** ⚡ | FP32 file (~151 MB) | 2.17 s | 0.235 | 4.25× |
+| **Local CPU** <br><sub>AMD Ryzen 7 5700U (8 threads)</sub> | ONNX Runtime CPU | FP32 ONNX (~115 MB) | 2.38 s | 0.259 | 3.86× |
+| **Local CPU** <br><sub>AMD Ryzen 7 5700U (8 threads)</sub> | PyTorch (standard) | FP32 file (~151 MB) | 3.84 s | 0.417 | 2.40× |
+| **Cloud GPU** <br><sub>Tesla T4 (15 GB)</sub> | **PyTorch (CUDA)** 🚀 | FP16 file (~76 MB) | **0.20 s** | **0.022** | **46.0×** |
+
+> 💡 **Highlights:**
+> - **PyTorch `fast_cpu`**: Delivers a **~1.96× speedup** over standard PyTorch CPU, outperforming ONNX Runtime while keeping 100% identical audio fidelity.
+> - **GPU Inference**: Generates ~10 seconds of speech in just **200 ms**.
+> - Full reproduction scripts and raw data: [BENCHMARK_RESULTS.md](examples/benchmark/BENCHMARK_RESULTS.md).
+
+---
+
+## 🎤 Voice Personas
+
+Kitsune features 5 distinct character voices mapped to speaker IDs `[0-4]`:
+
+| ID | Persona | Origin Reference | Style / Characteristics |
+|:---:|:---|:---|:---|
+| `0` | **Emilia** | *Re:Zero* | Soft, sweet, and gentle voice |
+| `1` | **Frieren** | *Frieren* | Calm, serene, and steady tone |
+| `2` | **Zero Two** | *Darling in the Franxx* | Energetic, playful, and expressive |
+| `3` | **Violet** | *Violet Evergarden* | Formal, disciplined, and expressive |
+| `4` | **Hiro** | *Darling in the Franxx* | Youthful, calm male voice |
+
+---
 
 ## 🏗️ Architecture Overview
 
 Built on a **VITS2-Slim** backbone, a pruned, non-autoregressive architecture optimized for:
-- **Monotonic Alignment Search (MAS)** for stable alignment training.
-- **Log-variance Clamping** `[-15.0, 5.0]` in both `PosteriorEncoder` and `TextEncoder` to prevent KL-loss explosions in `bf16`.
-- **HiFi-GAN v1-lite vocoder** (Spectral Norm disabled in Discriminator for numerical stability during low-precision training).
-- **Reduced normalcy flow layers** for speed and smaller memory footprint.
+- **Monotonic Alignment Search (MAS)** for reliable text-to-audio alignment.
+- **Log-variance Clamping** `[-15.0, 5.0]` in both `PosteriorEncoder` and `TextEncoder` to prevent KL-loss explosions in low precision.
+- **HiFi-GAN v1-lite vocoder** (Spectral Norm disabled in Discriminator for stability).
+- **Reduced normalcy flow layers** for speed and minimal memory footprint.
 
-## 🗣️ Supported Languages
-
-**Brazilian Portuguese (PT-BR)** is the exclusive language supported in this `v1` prototype.
-Phonemization is handled natively via `espeak-ng`.
-
-*(Native multilingual training is planned for a future `v2`)*
-
-## 🎤 Voice Personas
-
-The model features 5 distinct character voices mapping to speaker IDs `[0-4]`:
-
-| ID | Persona | Character Origin | Style / Characteristics |
-|:---|:--------|:-----------------|:------------------------|
-| `0` | **Emilia** | *Re:Zero* | Soft, sweet, and gentle voice |
-| `1` | **Frieren** | *Frieren* | Calm, serene, and steady voice |
-| `2` | **Zero Two** | *Darling in the Franxx* | Energetic, teasing, and playful |
-| `3` | **Violet** | *Violet Evergarden* | Formal, structured, and expressive |
-| `4` | **Hiro** | *Darling in the Franxx* | Youthful, calm male voice |
-
-## 📂 Project Structure
-
-```
-kitsune-tts/
-├── kitsune/                     # Core Python package
-│   ├── api.py                   # High-level KitsuneSynthesizer (PyTorch + ONNX)
-│   ├── trainer.py               # Training loop (VITS2 + MultiPeriodDiscriminator)
-│   ├── model/                   # VITS2-Slim architecture
-│   ├── phonemizer/              # Custom G2P engine & eSpeak wrapper
-│   └── data/                    # Dataset loaders, symbols, and audio utils
-├── clients/
-│   └── js/                      # JavaScript ONNX runtime (browser / Node.js)
-├── examples/                    # Usage examples
-└── requirements.txt
-```
+---
 
 ## 🚀 Quick Start
 
-### Download the model
+### 1. Download Model Weights
 
-The V1 weights and matching configuration are published at
-[Heitorkk2/Kitsune-TTS-V1](https://huggingface.co/Heitorkk2/Kitsune-TTS-V1).
-Run these commands from the project root; local model files go in `model/`.
+Weights are available on [Hugging Face](https://huggingface.co/Heitorkk2/Kitsune-TTS-V1):
 
 ```bash
 pip install huggingface_hub
+
+# For PyTorch inference (FP16 checkpoint ~76 MB)
 hf download Heitorkk2/Kitsune-TTS-V1 latest_model_fp16.pth model_config.json --local-dir model
-```
 
-For ONNX inference, download `kitsune39M.onnx` and `model_config.json` from the
-same repository, or [export it locally](examples/export/README.md):
-
-```bash
+# For ONNX inference (single file ~115 MB)
 hf download Heitorkk2/Kitsune-TTS-V1 kitsune39M.onnx model_config.json --local-dir model
 ```
 
-Install **espeak-ng** for phonemization before using the Python examples.
+*Note: Install `espeak-ng` on your operating system for phonemization.*
 
-### Python (PyTorch)
+---
+
+### 2. Python (PyTorch)
 
 ```bash
 pip install -e ".[torch]"
@@ -109,14 +113,33 @@ pip install -e ".[torch]"
 import scipy.io.wavfile as wavf
 from kitsune.api import KitsuneSynthesizer
 
+# Standard PyTorch inference
 synth = KitsuneSynthesizer(checkpoint="model/latest_model_fp16.pth")
-print(synth.list_speakers())  # ['emilia', 'frieren', 'zerotwo', 'violet', 'hiro']
-
 audio = synth.synthesize("Olá, eu sou a Frieren!", speaker="frieren")
 wavf.write("output.wav", 22050, audio)
 ```
 
-### Python (ONNX, no GPU needed)
+#### ⚡ Fast CPU Vocoder Mode (`fast_cpu=True`)
+
+Enable channels-last 2D convolutions for an immediate **~2× speedup on CPU**:
+
+```python
+synth = KitsuneSynthesizer(
+    checkpoint="model/latest_model_fp16.pth",
+    device="cpu",
+    fast_cpu=True,  # 🚀 ~2x faster vocoder execution
+)
+audio = synth.synthesize("Olá! Como você está?", speaker="frieren")
+```
+
+CLI equivalent:
+```bash
+python infer.py --model model/latest_model_fp16.pth --fast-cpu --text "Olá!" --output output.wav
+```
+
+---
+
+### 3. Python (ONNX Runtime)
 
 ```bash
 pip install -e ".[onnx]"
@@ -129,7 +152,9 @@ synth = KitsuneSynthesizer(onnx_path="model/kitsune39M.onnx")
 audio = synth.synthesize("Rodando na CPU com ONNX!", speaker="emilia")
 ```
 
-### JavaScript (Browser)
+---
+
+### 4. JavaScript (Browser / Node.js)
 
 ```html
 <script src="https://cdn.jsdelivr.net/npm/onnxruntime-web@1.27.0/dist/ort.min.js"></script>
@@ -143,78 +168,74 @@ audio = synth.synthesize("Rodando na CPU com ONNX!", speaker="emilia")
 </script>
 ```
 
-### Add a speaker on Colab
+---
 
-*Fine-tuning is experimental; defaults may evolve as we test more voices.*
+## 🎨 Fine-Tuning & Custom Speakers
 
 [![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/Heitorkk2/Kitsune-TTS/blob/main/examples/finetune/add_speakers_colab.ipynb)
 
-Use the [speaker fine-tuning notebook](examples/finetune/add_speakers_colab.ipynb)
-to configure one or more new voices and download the V1 FP16 base automatically.
-The notebook is a lightweight launcher for the same config-driven command used
-locally:
+Fine-tune new voices using the [Colab notebook](examples/finetune/add_speakers_colab.ipynb) or run locally:
 
 ```bash
 python finetune.py --config examples/finetune/config.example.json
 ```
 
-Edit the example JSON with your dataset paths before running it. Training code
-lives in `kitsune/finetune/`, not in notebook cells.
+See the [Fine-Tuning Guide](examples/finetune/README.md) for dataset preparation and configuration options. For ONNX export tools, see [Export Guide](examples/export/README.md).
 
-It warms up the new embeddings, then fine-tunes the full generator with AMP FP16,
-cached tensors and duration-aware batches. It saves a separate, specialized
-checkpoint compatible with the existing Python runtime, with no adapters required.
+---
 
-**Original voices may change in the specialized model.** Keep the untouched base
-checkpoint to use those voices. The architecture stays roughly 39M parameters;
-each new speaker adds one embedding row. Training time and results depend on the
-dataset and available GPU.
+## 📂 Project Structure
 
-The older embedding-only CLI remains available when exact preservation of shared
-weights is required. See [the fine-tuning guide](examples/finetune/README.md) for
-both workflows.
+```
+kitsune-tts/
+├── kitsune/                     # Core Python engine
+│   ├── api.py                   # High-level synthesizer (PyTorch & ONNX)
+│   ├── fast_cpu.py              # Channels-last CPU vocoder optimization
+│   ├── trainer.py               # Training loop (VITS2 + MPD)
+│   ├── model/                   # VITS2-Slim model architecture
+│   ├── phonemizer/              # Custom G2P & eSpeak wrapper
+│   └── data/                    # Dataset loaders & audio utils
+├── clients/
+│   └── js/                      # JavaScript ONNX runtime (Web/Node)
+├── examples/                    # Usage examples, finetuning & export scripts
+└── requirements.txt
+```
 
-### Profile the vocoder separately
+---
 
-The alternative split export produces an acoustic ONNX and a vocoder ONNX from
-the same 39M checkpoint. See
-[`examples/export/README.md`](examples/export/README.md).
+## 📜 License & Credits
 
-## 📜 License
+This project is licensed under **GPL-3.0**. 
 
-This project is licensed under **GPL-3.0**. This choice reflects both the
-project's use of espeak-ng (GPL-3.0) for phonemization, and a deliberate
-decision to keep derivative works open.
+- **Base Architecture:** [daniilrobnikov/vits2](https://github.com/daniilrobnikov/vits2) (MIT). Used as architectural starting point with transplanted layers; duration predictors, speaker embeddings, and vocab re-initialized from scratch.
+- **Phonemization:** eSpeak NG (GPL-3.0), through `phonemizer`.
+- **Pretrained Starting Point:** VCTK Corpus (CC BY 4.0).
+- **Model weights, code, and synthetic dataset:** Original work, licensed **GPL-3.0**.
 
-The Python package, JavaScript client, model code, and published model weights
-use the same GPL-3.0 license.
-
-Note: the VITS2 base architecture this project builds on is MIT-licensed
-(see Credits below). GPL-3.0 was chosen independently for this project.
-
-## Credits & Third-Party Licenses
-
-- Base model: [daniilrobnikov/vits2](https://github.com/daniilrobnikov/vits2), MIT. Used as the
-  architectural starting point via weight transplant from a VCTK-pretrained checkpoint (text
-  encoder + flow + posterior encoder layers carried over; duration predictor and speaker/vocab
-  embeddings re-initialized from scratch). This helped avoid the noisy early-training instability
-  of starting fully from random weights with limited compute.
-  
-- Phonemization: espeak-ng (GPL-3.0), via `phonemizer`.
-- Initial transplant checkpoint: VCTK Corpus, CC BY 4.0.
-
-Model weights, code, and synthetic dataset are original work, licensed GPL-3.0.
+---
 
 ## 🙏 Acknowledgments
 
 ### Special thanks
 
-Special thanks to [Everteson](https://github.com/Everteson) for helping build the Kitsune-TTS model.
+Special thanks to [Everteson](https://github.com/Everteson) and [Nakamura](https://github.com/NakamuraIA) for helping build the Kitsune-TTS model.
 
-### Projects that inspired and supported this work
+### Inspirations
 
-- [VITS2](https://arxiv.org/abs/2307.16430): Base architecture inspiration
-- [OmniVoice (k2-fsa)](https://github.com/k2-fsa/OmniVoice): Zero-shot voice cloning used to bootstrap the entire training corpus (no real recordings were used)
-- [XTTS (Coqui)](https://github.com/coqui-ai/TTS): Additional synthetic dataset generation
-- [Kokoro TTS](https://huggingface.co/hexgrad/Kokoro-82M): Proof that small parameter counts can achieve incredible quality
-- [Piper TTS](https://github.com/rhasspy/piper): ONNX export and CPU inference reference
+- [VITS2](https://arxiv.org/abs/2307.16430) — Base architecture inspiration.
+- [OmniVoice (k2-fsa)](https://github.com/k2-fsa/OmniVoice) — Zero-shot voice cloning used to bootstrap synthetic training data.
+- [XTTS (Coqui)](https://github.com/coqui-ai/TTS) — Synthetic dataset generation reference.
+- [Kokoro TTS](https://huggingface.co/hexgrad/Kokoro-82M) — Proof that compact speech models can deliver stunning quality.
+- [Piper TTS](https://github.com/rhasspy/piper) — ONNX export and CPU inference reference.
+
+---
+
+<div align="center">
+
+```text
+ᓚ₍ ^. ̫ .^₎
+```
+
+**Made with ❤️ by [Heitorkk2](https://github.com/Heitorkk2), [Nakamura](https://github.com/NakamuraIA) & [Everteson](https://github.com/Everteson)**
+
+</div>

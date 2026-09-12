@@ -27,7 +27,7 @@
     "onnxruntime-web": ">=1.19.0"
   },
   "scripts": {
-    "test": "node test-phonemizer.js"
+    "test": "node test-phonemizer.js && node --test test-inference.js"
   },
   "engines": {
     "node": ">=18"
