@@ -32,25 +32,14 @@ def kl_divergence(m_p, logs_p, m_q, logs_q, z_mask):
 def rand_slice_segments(x, x_lengths=None, segment_size=4):
     b, d, t = x.size()
     if x_lengths is None:
-        x_lengths = t
-    max_starts = x_lengths - segment_size + 1
-    max_starts = torch.clamp(max_starts, min=1)
-    
-    # Generate random starts
-    starts = (torch.rand([b]).to(device=x.device) * max_starts).to(dtype=torch.long)
-    
-    # Create the segments
-    segments = torch.zeros(
-        (b, d, segment_size), dtype=x.dtype, device=x.device
-    )
-    for i in range(b):
-        start = starts[i]
-        # In case segment_size is larger than available length (edge cases)
-        end = min(start + segment_size, t)
-        length = end - start
-        segments[i, :, :length] = x[i, :, start:end]
-        
-    return segments, starts
+        max_starts = torch.full(
+            (b,), max(t - segment_size + 1, 1), device=x.device
+        )
+    else:
+        max_starts = torch.clamp(x_lengths - segment_size + 1, min=1)
+
+    starts = (torch.rand([b], device=x.device) * max_starts).to(dtype=torch.long)
+    return _gather_segments(x, starts, segment_size), starts
 
 def sequence_mask(length, max_length=None):
     if max_length is None:
@@ -90,10 +79,18 @@ def clip_grad_value_(parameters, clip_value, norm_type=2):
     total_norm = total_norm ** (1.0 / norm_type)
     return total_norm
 
+def _gather_segments(x, starts, segment_size):
+    b, d, t = x.size()
+    if t == 0:
+        return x.new_zeros((b, d, segment_size))
+
+    offsets = torch.arange(segment_size, device=x.device).view(1, 1, -1)
+    indices = starts.to(device=x.device, dtype=torch.long).view(b, 1, 1) + offsets
+    valid = (indices >= 0) & (indices < t)
+    indices = indices.clamp(min=0, max=t - 1).expand(b, d, segment_size)
+    segments = torch.gather(x, 2, indices)
+    return segments * valid.expand_as(segments).to(dtype=x.dtype)
+
+
 def slice_segments(x, ids_str, segment_size=4):
-    ret = torch.zeros_like(x[:, :, :segment_size])
-    for i in range(x.size(0)):
-        idx_str = ids_str[i]
-        idx_end = idx_str + segment_size
-        ret[i] = x[i, :, idx_str:idx_end]
-    return ret
+    return _gather_segments(x, ids_str, segment_size)
